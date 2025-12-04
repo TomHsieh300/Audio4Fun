@@ -10,7 +10,8 @@
 #include <sound/soc.h>
 #include <sound/initval.h>
 
-#define MY_DEVICE_NAME "dummy-codec-dai"
+#define DUMMY_CODEC_DRV_NAME   "dummy-codec"
+#define DUMMY_CODEC_DAI_NAME   "dummy-codec-dai"
 
 static struct platform_device *dummy_pdev;
 
@@ -24,6 +25,7 @@ static const struct snd_soc_dapm_route dummy_dapm_routes[] = {
 };
 
 static const struct snd_soc_component_driver dummy_component_driver = {
+    .name               = DUMMY_CODEC_DRV_NAME,
     .dapm_widgets       = dummy_dapm_widgets,
     .num_dapm_widgets   = ARRAY_SIZE(dummy_dapm_widgets),
     .dapm_routes        = dummy_dapm_routes,
@@ -34,7 +36,7 @@ static const struct snd_soc_component_driver dummy_component_driver = {
 };
 
 static struct snd_soc_dai_driver dummy_dai = {
-    .name = "dummy-codec-dai",
+    .name = DUMMY_CODEC_DAI_NAME,
     .playback = {
         .stream_name = "Playback",
         .channels_min = 1,
@@ -54,7 +56,7 @@ static int dummy_codec_probe(struct platform_device *pdev)
 
 static struct platform_driver dummy_codec_driver = {
     .driver = {
-        .name = MY_DEVICE_NAME,
+        .name = DUMMY_CODEC_DRV_NAME,
         .owner = THIS_MODULE,
     },
     .probe = dummy_codec_probe,
@@ -69,7 +71,7 @@ static int __init my_dummy_init(void)
     
     struct platform_device *device;
     
-    device = platform_device_register_simple(MY_DEVICE_NAME, -1, NULL, 0);
+    device = platform_device_register_simple(DUMMY_CODEC_DRV_NAME, -1, NULL, 0);
     
     if (IS_ERR(device)) {
         platform_driver_unregister(&dummy_codec_driver);

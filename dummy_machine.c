@@ -8,7 +8,7 @@
 
 SND_SOC_DAILINK_DEFS(dummy_link,
     DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
-    DAILINK_COMP_ARRAY(COMP_CODEC("dummy-codec-dai", "dummy-codec-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("dummy-codec", "dummy-codec-dai")),
     DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
 
 static struct snd_soc_dai_link dummy_dai_link = {
