@@ -1,0 +1,21 @@
+# --- Kernel Module Build Artifacts ---
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+modules.order
+Module.symvers
+
+# --- Kernel Module Signing Keys ---
+signing_key.pem
+signing_key.x509
+x509.genkey
+
+# --- Temporary/Hidden Files ---
+.*.cmd
+.tmp_versions/
+
+# --- IDE/Editor settings ---
+*.swp
+.vscode/
