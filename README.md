@@ -48,3 +48,48 @@ Load the codec driver first, followed by the machine driver:
 ```bash
 sudo insmod dummy_codec.ko
 sudo insmod dummy_machine.ko
+```
+
+### 2. Verify Installation
+Check the kernel log to confirm successful probing:
+
+```bash
+dmesg | tail
+```
+
+Expected output: success messages from dummy-codec or dummy-audio-card.
+
+Verify the sound card registration:
+
+```bash
+cat /proc/asound/cards
+# or
+aplay -l
+```
+
+### 3. Mixer Control
+The driver now integrates a DAPM Switch widget to control the audio path. You can use `amixer` (part of `alsa-utils`) to interact with it.
+
+**List all controls:**
+
+```bash
+amixer contents
+# Look for: iface=MIXER, name='Switch'
+```
+Control the Playback Switch:
+
+```bash
+# Turn Off (Mute) - Disconnects DAC from Output
+amixer cset name='Switch' 0
+
+# Turn On (Unmute) - Connects DAC to Output
+amixer cset name='Switch' 1
+```
+
+### 4. Unload Modules
+Always remove the machine driver before the codec driver to avoid dependency issues:
+
+```bash
+sudo rmmod dummy_machine
+sudo rmmod dummy_codec
+```
