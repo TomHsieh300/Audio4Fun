@@ -15,13 +15,19 @@
 
 static struct platform_device *dummy_pdev;
 
+static const struct snd_kcontrol_new dummy_controls[] = {
+    SOC_DAPM_SINGLE("Switch", SND_SOC_NOPM, 0, 1, 0),
+};
+
 static const struct snd_soc_dapm_widget dummy_dapm_widgets[] = {
-    SND_SOC_DAPM_DAC("Dummy DAC", "Playback", SND_SOC_NOPM, 0, 0),
+    SND_SOC_DAPM_DAC("Dummy DAC", "Master Playback", SND_SOC_NOPM, 0, 0),
     SND_SOC_DAPM_OUTPUT("Dummy Out"),
+    SND_SOC_DAPM_SWITCH("Master Playback", SND_SOC_NOPM, 0, 0, &dummy_controls[0]),
 };
 
 static const struct snd_soc_dapm_route dummy_dapm_routes[] = {
-    { "Dummy Out", NULL, "Dummy DAC" },
+    { "Master Playback", "Switch", "Dummy DAC" },
+    { "Dummy Out", NULL, "Master Playback" },
 };
 
 static const struct snd_soc_component_driver dummy_component_driver = {
@@ -30,6 +36,7 @@ static const struct snd_soc_component_driver dummy_component_driver = {
     .num_dapm_widgets   = ARRAY_SIZE(dummy_dapm_widgets),
     .dapm_routes        = dummy_dapm_routes,
     .num_dapm_routes    = ARRAY_SIZE(dummy_dapm_routes),
+
     .idle_bias_on       = 1,
     .use_pmdown_time    = 1,
     .endianness         = 1,
@@ -38,7 +45,7 @@ static const struct snd_soc_component_driver dummy_component_driver = {
 static struct snd_soc_dai_driver dummy_dai = {
     .name = DUMMY_CODEC_DAI_NAME,
     .playback = {
-        .stream_name = "Playback",
+        .stream_name = "Master Playback",
         .channels_min = 1,
         .channels_max = 2,
         .rates = SNDRV_PCM_RATE_8000_192000,
