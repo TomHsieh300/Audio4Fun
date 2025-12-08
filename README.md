@@ -74,7 +74,8 @@ The driver now integrates a DAPM Switch widget to control the audio path. You ca
 
 ```bash
 amixer contents
-# Look for: iface=MIXER, name='Switch'
+# Look for: iface=MIXER, name='Master Playback Switch'
+#           iface=MIXER, name='Master Playback Volume'
 ```
 Control the Playback Switch:
 
@@ -84,6 +85,18 @@ amixer cset name='Switch' 0
 
 # Turn On (Unmute) - Connects DAC to Output
 amixer cset name='Switch' 1
+```
+
+Control the Master Volume:
+The volume range is 0-100. Changes are logged to the kernel ring buffer.
+
+```bash
+# Set volume to 80%
+amixer cset name='Master Playback Volume' 80
+
+# Check the log for the update message
+dmesg | tail
+# Expected: "update audio_volume to: 80"
 ```
 
 ### 4. Unload Modules
