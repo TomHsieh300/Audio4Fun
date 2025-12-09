@@ -1,5 +1,3 @@
-// tom_dummy_platform.c - PCM platform for Tom Dummy ASoC card
-
 #include <linux/module.h>
 #include <linux/platform_device.h>
 
@@ -26,7 +24,6 @@ static const struct snd_pcm_hardware tom_dummy_pcm_hardware = {
     .periods_max = 1024,
 };
 
-/* ==== PCM callbacks (new soc-component API) ==== */
 static int tom_dummy_platform_pcm_construct(struct snd_soc_component *component,
                                             struct snd_soc_pcm_runtime *rtd)
 {
@@ -34,15 +31,11 @@ static int tom_dummy_platform_pcm_construct(struct snd_soc_component *component,
 
     pr_info("tom_platform: pcm_construct (pcm=%s)\n", rtd->pcm->name);
 
-    /*
-     * 在 PCM 建立時，設定這個 PCM 所有 substreams 的 buffer。
-     * 使用 VMALLOC buffer，不綁定實體 DMA device。
-     */
     ret = snd_pcm_set_managed_buffer_all(rtd->pcm,
                                          SNDRV_DMA_TYPE_VMALLOC,
-                                         NULL,           /* dev */
-                                         64 * 1024,      /* min size */
-                                         512 * 1024);    /* max size */
+                                         NULL,
+                                         64 * 1024,
+                                         512 * 1024);
     if (ret < 0)
         dev_err(component->dev,
                 "tom_platform: set_managed_buffer_all failed: %d\n", ret);
@@ -117,11 +110,8 @@ static snd_pcm_uframes_t
 tom_dummy_platform_pointer(struct snd_soc_component *component,
                            struct snd_pcm_substream *substream)
 {
-    /* 練習用，先簡單回 0 */
     return 0;
 }
-
-/* ===== component driver ===== */
 
 static const struct snd_soc_component_driver tom_dummy_platform_component = {
     .name      = TOM_DUMMY_PLATFORM_DRV_NAME,
@@ -136,8 +126,6 @@ static const struct snd_soc_component_driver tom_dummy_platform_component = {
     .trigger   = tom_dummy_platform_trigger,
     .pointer   = tom_dummy_platform_pointer,
 };
-
-/* ===== platform driver ===== */
 
 static int tom_dummy_platform_probe(struct platform_device *pdev)
 {

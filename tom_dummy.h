@@ -1,4 +1,3 @@
-/* tom_dummy.h - common definitions for Tom's dummy ASoC card */
 #ifndef __TOM_DUMMY_H__
 #define __TOM_DUMMY_H__
 

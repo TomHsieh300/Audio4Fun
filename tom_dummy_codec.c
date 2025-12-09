@@ -1,5 +1,3 @@
-// tom_dummy_codec.c - Dummy codec for Tom Dummy ASoC card
-
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <sound/core.h>
@@ -12,8 +10,6 @@
 #define DEFAULT_VOLUME 20
 
 static int audio_volume = DEFAULT_VOLUME;
-
-/* ===== DAI ops ===== */
 
 static int tom_dummy_codec_startup(struct snd_pcm_substream *substream,
                                    struct snd_soc_dai *dai)
@@ -40,8 +36,6 @@ static const struct snd_soc_dai_ops tom_dummy_codec_dai_ops = {
     .startup   = tom_dummy_codec_startup,
     .hw_params = tom_dummy_codec_hw_params,
 };
-
-/* ===== Controls ===== */
 
 static int tom_dummy_vol_get(struct snd_kcontrol *kcontrol,
                              struct snd_ctl_elem_value *ucontrol)
@@ -74,8 +68,6 @@ static const struct snd_kcontrol_new tom_dummy_dapm_controls[] = {
     SOC_DAPM_SINGLE("Playback Switch", SND_SOC_NOPM, 0, 1, 0),
 };
 
-/* ===== DAPM widgets & routes ===== */
-
 static const struct snd_soc_dapm_widget tom_dummy_dapm_widgets[] = {
     SND_SOC_DAPM_DAC("Dummy DAC", "Dummy Playback", SND_SOC_NOPM, 0, 0),
     SND_SOC_DAPM_OUTPUT("Dummy Out"),
@@ -87,8 +79,6 @@ static const struct snd_soc_dapm_route tom_dummy_dapm_routes[] = {
     { "Playback Path", "Playback Switch", "Dummy DAC" },
     { "Dummy Out", NULL, "Playback Path" },
 };
-
-/* ===== Codec DAI ===== */
 
 static struct snd_soc_dai_driver tom_dummy_codec_dai = {
     .name = TOM_DUMMY_CODEC_DAI_NAME,
@@ -102,8 +92,6 @@ static struct snd_soc_dai_driver tom_dummy_codec_dai = {
     .ops = &tom_dummy_codec_dai_ops,
 };
 
-/* ===== Codec component ===== */
-
 static const struct snd_soc_component_driver tom_dummy_codec_component = {
     .name              = TOM_DUMMY_CODEC_DRV_NAME,
     .dapm_widgets      = tom_dummy_dapm_widgets,
@@ -115,8 +103,6 @@ static const struct snd_soc_component_driver tom_dummy_codec_component = {
     .idle_bias_on      = 1,
     .use_pmdown_time   = 1,
 };
-
-/* ===== platform driver ===== */
 
 static int tom_dummy_codec_probe(struct platform_device *pdev)
 {

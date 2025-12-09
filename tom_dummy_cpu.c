@@ -1,5 +1,3 @@
-// tom_dummy_cpu.c - virtual CPU DAI for Tom Dummy ASoC card
-
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <sound/core.h>

@@ -1,4 +1,3 @@
-// tom_dummy_machine.c - Machine driver for Tom Dummy ASoC card
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -8,8 +7,6 @@
 #include <sound/soc.h>
 
 #include "tom_dummy.h"
-
-/* ====== DAI link ====== */
 
 static int tom_dummy_machine_hw_params(struct snd_pcm_substream *substream,
                                        struct snd_pcm_hw_params *params)
@@ -45,16 +42,12 @@ static struct snd_soc_dai_link tom_dummy_dai_link = {
     SND_SOC_DAILINK_REG(tom_dummy_link),
 };
 
-/* ====== Card ====== */
-
 static struct snd_soc_card tom_dummy_card = {
     .name      = TOM_DUMMY_CARD_NAME,
     .owner     = THIS_MODULE,
     .dai_link  = &tom_dummy_dai_link,
     .num_links = 1,
 };
-
-/* ====== Machine platform driver ====== */
 
 static int tom_dummy_machine_probe(struct platform_device *pdev)
 {
