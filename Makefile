@@ -1,4 +1,7 @@
-obj-m += dummy_codec.o dummy_machine.o
+obj-m += tom_dummy_cpu.o
+obj-m += tom_dummy_platform.o
+obj-m += tom_dummy_codec.o
+obj-m += tom_dummy_machine.o
 
 KVERSION := $(shell uname -r)
 KDIR := /lib/modules/$(KVERSION)/build
