@@ -46,8 +46,9 @@ This project serves as a reference for:
 - Format: S16_LE (16-bit signed little-endian)
 
 ### Platform (`tom_dummy_platform.ko`)
-- Implements PCM buffer management using `SNDRV_DMA_TYPE_VMALLOC`
-- Provides PCM callbacks: open, close, hw_params, hw_free, prepare, trigger, pointer
+- **Virtual PCM Engine**: Implements a software-based DMA simulation using `hrtimer`. It consumes data in real-time and generates virtual period interrupts.
+- **Buffer Management**: Uses `SNDRV_DMA_TYPE_VMALLOC` for continuous buffer allocation.
+- **Flow Control**: Correctly handles `trigger` (start/stop) and `pointer` callbacks, allowing userspace tools like `aplay` to show accurate progress bars and drain buffers correctly.
 - Buffer size: 64KB ~ 512KB
 - Period size: 64B ~ 64KB
 
