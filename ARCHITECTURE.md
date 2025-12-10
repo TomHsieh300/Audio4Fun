@@ -30,12 +30,12 @@ Userspace
  (I2S)        (Codec IC)     (Software DMA)
 ```
 
-Each component has a clearly defined responsibility:
+**Each component has a clearly defined responsibility:**
 
 | Component | File | Responsibility |
 | :--- | :--- | :--- |
 | **Machine** | `tom_dummy_machine.c` | Defines overall card topology & DAI links |
-| **CPU DAI** | `tom_dummy_cpu.c` | Represents SoC I2S controller capabilities |
+| **CPU DAI** | `tom_dummy_cpu.c` | Represents SoC I2S controller capabilities (Full Duplex) |
 | **Codec** | `tom_dummy_codec.c` | Represents audio codec (volume, DAPM, format) |
 | **Platform** | `tom_dummy_platform.c` | PCM engine (buffer, period, pointer, trigger) |
 
@@ -75,6 +75,7 @@ Defines:
 - `hw_params()` handles SoC I2S configuration
 - `startup()` prepares controller
 - Provide `snd_soc_dai_driver` to Machine driver
+- **Support Full Duplex (Playback & Capture)**
 
 > **Matches real world:**
 > - Rockchip I2S controller (`rockchip_i2s.c`)
@@ -84,8 +85,8 @@ Defines:
 **Role: Audio Codec IC (volume, DAPM, signal path)**
 
 Defines:
-- DAPM widgets (DAC, output)
-- DAPM routes (DAC → Switch → Out)
+- DAPM widgets (DAC, ADC, Output, Input)
+- DAPM routes (DAC → Switch → Out, In → ADC)
 - ALSA mixer controls (Volume control)
 - Codec DAI capabilities (rates, formats)
 - Responds to `hw_params()` and `startup()`
@@ -115,16 +116,19 @@ In this project, it is implemented using **hrtimer + software buffer movement**.
 - Run hrtimer callback:
     - Advance `hw_ptr`
     - Call `snd_pcm_period_elapsed()`
+    - **(Capture Only)**: Fill DMA buffer with silence (memset 0) to simulate data arrival.
 
 > **Matches real world:**
 > - Rockchip DMA engine (`rk_dmaengine_pcm.c`)
 > - ALSA generic dmaengine PCM
 > - Any hardware PCM engine
 
-## 3. ASoC Playback Call Flow (Detailed)
+## 3. ASoC Call Flow (Detailed)
+
+This flow applies to both Playback (`aplay`) and Capture (`arecord`).
 
 ```text
-aplay
+aplay / arecord
  |
  | open()
  v
@@ -151,6 +155,7 @@ tom_platform.trigger() → start hrtimer
  v
 hrtimer_cb()
   → update hw_ptr
+  → (Capture: fill buffer with 0)
   → snd_pcm_period_elapsed()
  |
  | trigger(STOP)
@@ -258,22 +263,23 @@ This model is essential—every ASoC system fits this structure.
 
 | Term               | Definition                            |
 | ------------------ | ------------------------------------- |
-| **ASoC**           | ALSA System-on-Chip                   |
-| **DAI**            | Digital Audio Interface               |
-| **CPU DAI**        | SoC audio controller                  |
-| **Codec DAI**      | External codec interface              |
-| **Platform**       | PCM engine (DMA)                      |
+| **ASoC** | ALSA System-on-Chip                   |
+| **DAI** | Digital Audio Interface               |
+| **CPU DAI** | SoC audio controller                  |
+| **Codec DAI** | External codec interface              |
+| **Platform** | PCM engine (DMA)                      |
 | **Machine Driver** | Board-level topology                  |
-| **DAPM**           | Dynamic Audio Power Management        |
-| **hw_params**      | PCM hardware config stage             |
-| **prepare**        | Stream initialization                 |
-| **trigger**        | Start/stop PCM                        |
-| **pointer**        | Reports playback progress             |
-| **period**         | Chunk of samples triggering interrupt |
-| **buffer**         | Full PCM ring buffer                  |
-| **hw_ptr**         | Hardware pointer                      |
-| **DMA**            | Direct Memory Access                  |
-| **aplay**          | ALSA playback utility                 |
+| **DAPM** | Dynamic Audio Power Management        |
+| **hw_params** | PCM hardware config stage             |
+| **prepare** | Stream initialization                 |
+| **trigger** | Start/stop PCM                        |
+| **pointer** | Reports playback progress             |
+| **period** | Chunk of samples triggering interrupt |
+| **buffer** | Full PCM ring buffer                  |
+| **hw_ptr** | Hardware pointer                      |
+| **DMA** | Direct Memory Access                  |
+| **aplay** | ALSA playback utility                 |
+| **arecord** | ALSA recording utility                |
 
 ## 9. Summary
 
@@ -281,7 +287,7 @@ This model is essential—every ASoC system fits this structure.
 
 - ✔ **Clear CPU / Codec / Platform / Machine separation**
 - ✔ **Realistic ALSA PCM lifecycle**
-- ✔ **Fully functional timer-based DMA simulator**
+- ✔ **Fully functional timer-based DMA simulator (Playback & Capture)**
 - ✔ **Clean ASoC architecture identical to real SoC drivers**
 
 This project forms an ideal foundation for porting to:
