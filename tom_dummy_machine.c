@@ -35,8 +35,8 @@ SND_SOC_DAILINK_DEFS(tom_dummy_link,
 
 static struct snd_soc_dai_link tom_dummy_dai_link = {
     .name          = "Tom Dummy Link",
-    .stream_name   = "Dummy Playback",
-    .playback_only = 1,
+    .stream_name   = "Tom Dummy PCM",
+
     .ops           = &tom_dummy_machine_ops,
 
     SND_SOC_DAILINK_REG(tom_dummy_link),

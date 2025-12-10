@@ -82,6 +82,7 @@ static const struct snd_soc_dapm_route tom_dummy_dapm_routes[] = {
 
 static struct snd_soc_dai_driver tom_dummy_codec_dai = {
     .name = TOM_DUMMY_CODEC_DAI_NAME,
+
     .playback = {
         .stream_name  = "Dummy Playback",
         .channels_min = 2,
@@ -89,6 +90,15 @@ static struct snd_soc_dai_driver tom_dummy_codec_dai = {
         .rates        = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000),
         .formats      = SNDRV_PCM_FMTBIT_S16_LE,
     },
+
+    .capture= {
+        .stream_name  = "Dummy Capture",
+        .channels_min = 2,
+        .channels_max = 2,
+        .rates        = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000),
+        .formats      = SNDRV_PCM_FMTBIT_S16_LE,
+    },
+
     .ops = &tom_dummy_codec_dai_ops,
 };
 

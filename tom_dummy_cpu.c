@@ -35,6 +35,7 @@ static const struct snd_soc_dai_ops tom_dummy_cpu_dai_ops = {
 
 static struct snd_soc_dai_driver tom_dummy_cpu_dai = {
     .name = TOM_DUMMY_CPU_DAI_NAME,
+
     .playback = {
         .stream_name  = "Tom CPU Playback",
         .channels_min = 2,
@@ -42,6 +43,15 @@ static struct snd_soc_dai_driver tom_dummy_cpu_dai = {
         .rates        = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000),
         .formats      = SNDRV_PCM_FMTBIT_S16_LE,
     },
+
+    .capture = {
+        .stream_name = "Tom CPU Capture",
+        .channels_min = 2,
+        .channels_max = 2,
+        .rates        = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000),
+        .formats      = SNDRV_PCM_FMTBIT_S16_LE,
+    },
+
     .ops = &tom_dummy_cpu_dai_ops,
 };
 
