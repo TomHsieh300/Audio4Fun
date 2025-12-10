@@ -7,8 +7,9 @@ Audio4Fun is a specialized project designed to demonstrate and explore the Linux
 This project serves as a reference for:
 * Understanding ASoC architecture (Machine vs. Codec vs. CPU DAI vs. Platform).
 * Learning DAPM (Dynamic Audio Power Management) widget configuration.
+* **Simulating bidirectional audio streams (Playback & Capture).**
 * Exploring PCM buffer management with VMALLOC buffers.
-* Practicing Linux Kernel Module compilation and signing.
+* Practicing Linux Kernel Module compilation, signing, and **stress testing**.
 
 ## Architecture
 
@@ -35,33 +36,36 @@ This project serves as a reference for:
 | `tom_dummy_platform.c` | PCM Platform driver, handles buffer management and PCM operations |
 | `tom_dummy_codec.c` | Codec driver, defines DAI capabilities, DAPM widgets, and mixer controls |
 | `tom_dummy_machine.c` | Machine driver, creates `snd_soc_card` and links all components together |
+| `test_audio_driver.sh`| **Stress test script for concurrent Playback/Capture open/close cycles** |
 | `Makefile` | Kbuild-compliant makefile with module signing support |
 
 ## Module Details
 
 ### CPU DAI (`tom_dummy_cpu.ko`)
-- Registers a virtual CPU DAI component
-- Supports stereo playback (2 channels)
-- Sample rates: 44100 Hz, 48000 Hz
-- Format: S16_LE (16-bit signed little-endian)
+- Registers a virtual CPU DAI component.
+- Supports **Full Duplex** (Playback & Capture).
+- Channels: 2 (Stereo).
+- Sample rates: 44100 Hz, 48000 Hz.
+- Format: S16_LE (16-bit signed little-endian).
 
 ### Platform (`tom_dummy_platform.ko`)
-- **Virtual PCM Engine**: Implements a software-based DMA simulation using `hrtimer`. It consumes data in real-time and generates virtual period interrupts.
+- **Virtual PCM Engine**: Implements a software-based DMA simulation using `hrtimer`. It consumes/produces data in real-time and generates virtual period interrupts.
+- **Capture Simulation**: For capture streams, the driver fills the DMA buffer with silence (memset 0) to simulate incoming data, preventing uninitialized memory reads.
 - **Buffer Management**: Uses `SNDRV_DMA_TYPE_VMALLOC` for continuous buffer allocation.
-- **Flow Control**: Correctly handles `trigger` (start/stop) and `pointer` callbacks, allowing userspace tools like `aplay` to show accurate progress bars and drain buffers correctly.
-- Buffer size: 64KB ~ 512KB
-- Period size: 64B ~ 64KB
+- **Concurrency & Stability**: Features robust locking mechanisms to handle race conditions during concurrent `trigger`, `pointer`, and `close` operations.
+- Buffer size: 64KB ~ 512KB.
+- Period size: 1024B ~ 64KB.
 
 ### Codec (`tom_dummy_codec.ko`)
-- DAPM widgets: `Dummy DAC`, `Dummy Out`, `Playback Path` (switch)
+- DAPM widgets: `Dummy DAC`, `Dummy Out`, `Dummy ADC`, `Dummy In`, `Playback Path` (switch).
 - Mixer controls:
   - `Master Playback Volume` (range: 0-100, default: 20)
   - `Playback Switch` (DAPM switch for audio path control)
 
 ### Machine (`tom_dummy_machine.ko`)
 - Card name: "Tom Dummy ASoC Card"
-- Links CPU DAI, Codec DAI, and Platform together
-- Playback-only configuration
+- Links CPU DAI, Codec DAI, and Platform together.
+- Configured for both Playback and Capture streams.
 
 ## Prerequisites
 
@@ -132,10 +136,13 @@ Verify the sound card registration:
 cat /proc/asound/cards
 # or
 aplay -l
+arecord -l
 ```
 
-### 3. Playback Test (Trigger PCM Callbacks)
+### 3. Playback & Capture Test
 Generate some dummy audio traffic to verify the PCM path and buffer management.
+
+**Playback:**
 
 ```bash
 # Play random noise (or any wav file) to the card
@@ -143,7 +150,24 @@ Generate some dummy audio traffic to verify the PCM path and buffer management.
 aplay -D plughw:0 -f cd /dev/urandom --duration=5
 ```
 
-### 4. Mixer Control
+**Capture**
+
+```bash
+# Record 5 seconds of audio (will be silence/zero-filled data)
+arecord -D plughw:0 -f cd -d 5 /tmp/test_capture.wav
+```
+
+### 4. Stress Testing
+
+Use the provided script to verify driver stability under high load and rapid open/close cycles.
+
+```bash
+chmod +x test_audio_driver.sh
+./test_audio_driver.sh
+```
+*This script will simulate 100 iterations of concurrent playback and recording, forcibly killing streams to test driver resource cleanup.*
+
+### 5. Mixer Control
 
 Use `amixer` (part of `alsa-utils`) to interact with mixer controls.
 
@@ -176,7 +200,7 @@ dmesg | tail
 # Expected: "tom_codec: update audio_volume to 80"
 ```
 
-### 5. Unload Modules
+### 6. Unload Modules
 
 Unload in reverse order to avoid dependency issues:
 
