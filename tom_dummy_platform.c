@@ -25,6 +25,8 @@ struct tom_dummy_runtime {
     ktime_t period_ktime;
 
     bool running;
+
+    int sine_phase;
 };
 
 static const struct snd_pcm_hardware tom_dummy_pcm_hardware = {
@@ -88,24 +90,31 @@ static enum hrtimer_restart tom_dummy_hrtimer_cb(struct hrtimer *timer)
 
     spin_unlock_irqrestore(&prtd->lock, flags);
 
+
     if (is_capture && runtime->dma_area) {
-        snd_pcm_uframes_t first = period;
-        snd_pcm_uframes_t second = 0;
+        snd_pcm_uframes_t frames_to_write = prtd->period_size;
+        snd_pcm_uframes_t i;
+        unsigned int channels = runtime->channels;
+        snd_pcm_uframes_t frame;
+        unsigned int ch;
 
-        if (old_hw_ptr + period > buf_frames) {
-            first  = buf_frames - old_hw_ptr;
-            second = period - first;
+        for (i = 0; i < frames_to_write; i++) {
+            frame = old_hw_ptr + i;
+            if (frame >= buf_frames)
+                frame -= buf_frames;
+
+            size_t offset = frames_to_bytes(runtime, frame);
+            s16 *dma_ptr = (s16 *)(runtime->dma_area + offset);
+
+            s16 sample = sine_1k_48k_table[prtd->sine_phase];
+
+            for (ch = 0; ch < channels; ch++)
+                *dma_ptr++ = sample;
+
+            prtd->sine_phase++;
+            if (prtd->sine_phase >= ARRAY_SIZE(sine_1k_48k_table))
+                prtd->sine_phase = 0;
         }
-
-        size_t offset = frames_to_bytes(runtime, old_hw_ptr);
-        size_t bytes1 = frames_to_bytes(runtime, first);
-        size_t bytes2 = frames_to_bytes(runtime, second);
-
-        if (offset + bytes1 <= runtime->dma_bytes)
-            memset(runtime->dma_area + offset, 0, bytes1);
-
-        if (second && bytes2 <= runtime->dma_bytes)
-            memset(runtime->dma_area, 0, bytes2);
     }
 
     snd_pcm_period_elapsed(substream);
