@@ -7,7 +7,7 @@ Audio4Fun is a specialized project designed to demonstrate and explore the Linux
 This project serves as a reference for:
 * Understanding ASoC architecture (Machine vs. Codec vs. CPU DAI vs. Platform).
 * Learning DAPM (Dynamic Audio Power Management) widget configuration.
-* **Simulating bidirectional audio streams (Playback & Capture).**
+* **Simulating bidirectional audio streams (Playback & Capture) with Loopback.**
 * Exploring PCM buffer management with VMALLOC buffers.
 * Practicing Linux Kernel Module compilation, signing, and **stress testing**.
 
@@ -31,9 +31,9 @@ This project serves as a reference for:
 
 | File | Description |
 |------|-------------|
-| `tom_dummy.h` | Common definitions and driver/DAI name macros |
+| `tom_dummy.h` | Common definitions, driver names, and **loopback device structure** |
 | `tom_dummy_cpu.c` | CPU DAI driver, defines the CPU-side digital audio interface |
-| `tom_dummy_platform.c` | PCM Platform driver, handles buffer management and PCM operations |
+| `tom_dummy_platform.c` | PCM Platform driver, handles buffer management, **loopback FIFO**, and PCM operations |
 | `tom_dummy_codec.c` | Codec driver, defines DAI capabilities, DAPM widgets, and mixer controls |
 | `tom_dummy_machine.c` | Machine driver, creates `snd_soc_card` and links all components together |
 | `test_audio_driver.sh`| **Stress test script for concurrent Playback/Capture open/close cycles** |
@@ -50,11 +50,14 @@ This project serves as a reference for:
 
 ### Platform (`tom_dummy_platform.ko`)
 - **Virtual PCM Engine**: Implements a software-based DMA simulation using `hrtimer`. It consumes/produces data in real-time and generates virtual period interrupts.
-- **Capture Simulation**: For capture streams, the driver fills the DMA buffer with silence (memset 0) to simulate incoming data, preventing uninitialized memory reads.
+- **Internal Loopback Mechanism**:
+  - **Playback**: Data written to the playback stream is copied into an internal circular buffer (FIFO).
+  - **Capture**: Data read from the capture stream is fetched from this internal FIFO.
+  - *Note: If the FIFO is empty (underrun), the capture buffer is filled with silence.*
 - **Buffer Management**: Uses `SNDRV_DMA_TYPE_VMALLOC` for continuous buffer allocation.
 - **Concurrency & Stability**: Features robust locking mechanisms to handle race conditions during concurrent `trigger`, `pointer`, and `close` operations.
 - Buffer size: 64KB ~ 512KB.
-- Period size: 1024B ~ 64KB.
+- Period size: 4096B ~ 64KB.
 
 ### Codec (`tom_dummy_codec.ko`)
 - DAPM widgets: `Dummy DAC`, `Dummy Out`, `Dummy ADC`, `Dummy In`, `Playback Path` (switch).
@@ -118,18 +121,6 @@ Check the kernel log to confirm successful probing:
 dmesg | tail -20
 ```
 
-Expected output:
-```
-tom_cpu_dai: init
-tom_cpu_dai: probe
-tom_platform: init
-tom_platform: probe
-tom_codec: init
-tom_codec: probe
-tom_machine: init
-tom_machine: probe
-```
-
 Verify the sound card registration:
 
 ```bash
@@ -139,23 +130,24 @@ aplay -l
 arecord -l
 ```
 
-### 3. Playback & Capture Test
-Generate some dummy audio traffic to verify the PCM path and buffer management.
+### 3. Loopback Test (Playback & Capture)
 
-**Playback:**
+Verify the internal loopback path by recording what you play.
 
-```bash
-# Play random noise (or any wav file) to the card
-# Replace '-D plughw:X' with your card number (e.g., plughw:0)
-aplay -D plughw:0 -f cd /dev/urandom --duration=5
-```
-
-**Capture**
+**Step 1: Start Recording (Background)**
 
 ```bash
-# Record 5 seconds of audio (will be silence/zero-filled data)
-arecord -D plughw:0 -f cd -d 5 /tmp/test_capture.wav
+# Record to a file (will capture data from the internal loopback FIFO)
+arecord -D plughw:0 -f S16_LE -r 48000 -c 2 -d 10 /tmp/loopback_test.wav &
 ```
+
+**Step 2: Start Playback**
+
+```bash
+# Play a wav file (this audio will be fed into the loopback buffer)
+aplay -D plughw:0 /usr/share/sounds/alsa/Front_Center.wav
+```
+
 
 ### 4. Stress Testing
 
