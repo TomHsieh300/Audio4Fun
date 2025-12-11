@@ -16,7 +16,7 @@
 
 /* Platform (PCM) */
 #define TOM_DUMMY_PLATFORM_DRV_NAME  "tom-dummy-platform"
-
+#define LOOPBACK_BUFFER_SIZE          (64 * 1024)
 
 /* 1kHz Sine Wave @ 48kHz Sample Rate (48 samples per cycle) */
 static const s16 sine_1k_48k_table[48] = {
@@ -24,6 +24,17 @@ static const s16 sine_1k_48k_table[48] = {
     21493, 21598, 21376, 20830, 19967, 18803, 17357, 15654, 13725, 11606, 9336, 6956,
     4510, 2043, -402, -2786, -5070, -7215, -9186, -10952, -12484, -13755, -14742, -15433,
     -15814, -15882, -15635, -15077, -14217, -13069, -11654, -10000, -8142, -6116, -3962, -1728
+};
+
+struct tom_dummy_dev {
+    struct snd_soc_component *component;
+
+    u8 *loopback_buf;
+    size_t loopback_wptr;
+    size_t loopback_rptr;
+    size_t loopback_filled;
+
+    spinlock_t loopback_lock;
 };
 
 #endif /* __TOM_DUMMY_H__ */
