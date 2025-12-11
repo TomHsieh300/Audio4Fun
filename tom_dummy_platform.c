@@ -30,7 +30,8 @@ struct tom_dummy_runtime {
 static const struct snd_pcm_hardware tom_dummy_pcm_hardware = {
     .info = SNDRV_PCM_INFO_MMAP |
             SNDRV_PCM_INFO_INTERLEAVED |
-            SNDRV_PCM_INFO_MMAP_VALID,
+            SNDRV_PCM_INFO_MMAP_VALID |
+            SNDRV_PCM_INFO_BATCH,
     .formats = SNDRV_PCM_FMTBIT_S16_LE,
     .rates = SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000,
     .rate_min = 44100,
@@ -38,7 +39,7 @@ static const struct snd_pcm_hardware tom_dummy_pcm_hardware = {
     .channels_min = 2,
     .channels_max = 2,
     .buffer_bytes_max = 512 * 1024,
-    .period_bytes_min = 1024,
+    .period_bytes_min = 4096,
     .period_bytes_max = 64 * 1024,
     .periods_min = 2,
     .periods_max = 1024,
@@ -54,6 +55,10 @@ static enum hrtimer_restart tom_dummy_hrtimer_cb(struct hrtimer *timer)
     snd_pcm_uframes_t old_hw_ptr;
     snd_pcm_uframes_t period, buf_frames;
     bool is_capture;
+    bool still_running;
+    u64 overruns;
+
+    ktime_t now_or_expiry = hrtimer_cb_get_time(timer);
 
     spin_lock_irqsave(&prtd->lock, flags);
 
@@ -92,18 +97,32 @@ static enum hrtimer_restart tom_dummy_hrtimer_cb(struct hrtimer *timer)
             second = period - first;
         }
 
-        memset(runtime->dma_area + frames_to_bytes(runtime, old_hw_ptr),
-               0, frames_to_bytes(runtime, first));
+        size_t offset = frames_to_bytes(runtime, old_hw_ptr);
+        size_t bytes1 = frames_to_bytes(runtime, first);
+        size_t bytes2 = frames_to_bytes(runtime, second);
 
-        if (second)
-            memset(runtime->dma_area, 0, frames_to_bytes(runtime, second));
+        if (offset + bytes1 <= runtime->dma_bytes)
+            memset(runtime->dma_area + offset, 0, bytes1);
+
+        if (second && bytes2 <= runtime->dma_bytes)
+            memset(runtime->dma_area, 0, bytes2);
     }
 
     snd_pcm_period_elapsed(substream);
 
-    if (hrtimer_forward_now(timer, prtd->period_ktime) == 0) {
-        pr_warn_ratelimited("tom_platform: hrtimer_forward_now returned 0!\n");
+    spin_lock_irqsave(&prtd->lock, flags);
+    still_running = prtd->running;
+    spin_unlock_irqrestore(&prtd->lock, flags);
+
+    if (!still_running)
+        return HRTIMER_NORESTART;
+
+    overruns = hrtimer_forward(timer, now_or_expiry, prtd->period_ktime);
+
+    if (overruns > 1) {
+        pr_warn_ratelimited("tom_platform: lost %llu ticks\n", overruns - 1);
     }
+
     return HRTIMER_RESTART;
 }
 
@@ -126,7 +145,7 @@ static int tom_dummy_platform_open(struct snd_soc_component *component,
 
     spin_lock_init(&prtd->lock);
 
-    hrtimer_init(&prtd->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL_SOFT);
+    hrtimer_init(&prtd->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
     prtd->timer.function = tom_dummy_hrtimer_cb;
 
     runtime->hw = tom_dummy_pcm_hardware;
@@ -233,7 +252,7 @@ static int tom_dummy_platform_trigger(struct snd_soc_component *component,
         prtd->running = true;
         spin_unlock_irqrestore(&prtd->lock, flags);
 
-        hrtimer_start(&prtd->timer, prtd->period_ktime, HRTIMER_MODE_REL_SOFT);
+        hrtimer_start(&prtd->timer, prtd->period_ktime, HRTIMER_MODE_REL);
         break;
 
     case SNDRV_PCM_TRIGGER_STOP:
